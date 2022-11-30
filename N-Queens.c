@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include <math.h>
+#include <omp.h>
 
 /**
  * Fills in z with integers from min to max by step inplace.
@@ -129,45 +130,102 @@ int sample(double *p, int X) {
 	return k;
 }
 
-int main()
+/**
+ * Perform K random swaps on a list of integers.
+ */
+void shuffle(int* z, int K, int* idx_pairs, int nb_pairs) 
 {
-	// Variables
-	int N = 100;
-	int C = N * (N-1) / 2;
+	for (int k = 0; k < K; k++) {
+		int pair_idx = (rand() % nb_pairs) * 2;
+		int i = idx_pairs[pair_idx];
+		int j = idx_pairs[pair_idx+1];
+		swap(z, i, j);
+	}
+}
+
+/**
+ * Assumes memory has been allocated. Copies len elements of 
+ * src into dst.
+ */
+void arrcopy(int* src, int* dst, int len) 
+{
+	for (int i = 0; i < len; i++) {
+		dst[i] = src[i];
+	}
+}
+
+int main()
+{	
+	// Snapshot of time
+	time_t then;
+	time(&then);
 	
+	// Reproducibility
+	srand(2022);
+	
+	// Variables
+	int N = 150;
+	int C = N * (N-1) / 2;
+	double b = 1;
+	
+	// Starting position
 	int *z = malloc(N * sizeof(int));
 	arange(z, 1, N+1, 1);
 	
+	// Pairs of queen indices
 	int *idx_pairs = malloc(2 * C * sizeof(int));
 	pairs(idx_pairs, N);
 	
+	// Shuffle the starting position
+	shuffle(z, 2 * N, idx_pairs, C);
+	
+	// Probability distribution to build
 	double *p = malloc((C+1) * sizeof(double));
-	p[C] = 1;
+	
+	// Set number of threads
+	omp_set_num_threads(4);
+		
 	
 	// Search
+	int MAX_ITERS = 1000000;
+	int REG_ITERS = 500;
+	time_t t1, t2;
+	time(&t1);
 	
-	
-	srand(time(NULL));
-	int MAX_ITERS = 10000;
 	for (int t = 1; t < MAX_ITERS; t++) {
 		
-		// Calculate loss.
-		int l = loss(z, idx_pairs, C);
-		if (l == 0) { break; }
-		
-		if (t % 100 == 0) {
-			printf("%d / %d - Loss=%d\n", t, MAX_ITERS, l);
+		// Calculate loss at regular intervals.
+		if (t % REG_ITERS == 0) {
+			
+			
+			int l = loss(z, idx_pairs, C);
+			
+			time(&t2);
+			system("cls");
+			printf("%d / %d - Loss=%d. For %d iterations, %d seconds.\n", t, MAX_ITERS, l, REG_ITERS, t2-t1);
+			t1 = t2;
+			if (l == 0) { break; }
 		}
 		
-		// Outgoing arrows
-		for (int k = 0; k < 2 * C; k+=2) {
-			int i = idx_pairs[k]; int j = idx_pairs[k+1];
-			p[k/2] = min(1, exp(-log(t*t/N)*loss_diff(z, i, j, N))) / C;
-			p[C] -= p[k/2];
+		// Update beta
+		b = log(t * t / N);
+		
+		#pragma omp parallel for 
+		for (int k = 0; k < C; k++) {
+			int i = idx_pairs[2*k]; 
+			int j = idx_pairs[2*k+1];
+			int* y = malloc(N * sizeof(int));
+			arrcopy(z, y, N);
+			p[k] = min(1, exp(-b*loss_diff(y, i, j, N))) / C;
+			free(y);
 		}
 		
-		// Self-loop.
-		p[C] = max(0, p[C]);
+		double sum = 0;
+		#pragma omp parallel for reduction(+:sum)
+		for (int k = 0; k < C; k++) {
+			sum += p[k];
+		}
+		p[C] = max(0, 1-sum);
 		
 		// Choose a swap.
 		int k = sample(p, C+1);
@@ -176,12 +234,27 @@ int main()
 		}
 	}
 	
+	// Results
+	printf("\nFor the %d - queens problem\n----------------\n", N);
+	
 	if (loss(z, idx_pairs, C) == 0) {
 		printf("Solution : ");
 		print_int_arr(z, N);
 	} else {
-		printf("Solution not found in %d iterations", MAX_ITERS);
+		printf("Solution not found in %d iterations\n", MAX_ITERS);
+		print_int_arr(z, N);
 	}
+	
+	// Timing information
+	
+	time_t now;
+	time(&now);
+	
+	time_t diff = now - then;
+	
+	printf("Began: %s", ctime(&then));
+	printf("Ended: %s", ctime(&now));
+	printf("Diff: %d minutes, %d seconds", diff / 60, diff % 60);
 	
 	free(z);
 	free(idx_pairs);
