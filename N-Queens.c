@@ -164,7 +164,7 @@ int main()
 	srand(2022);
 	
 	// Variables
-	int N = 10;
+	int N = 1000;
 	int C = N * (N-1) / 2;
 	double b = 1;
 	
@@ -180,12 +180,13 @@ int main()
 	shuffle(z, 2 * N, idx_pairs, C);
 		
 	// Search
+	int t = 0;
 	int MAX_ITERS = 10000000;
 	
 	// Calculate current loss
 	int l = loss(z, idx_pairs, C);
 	
-	for (int t = 1; t < MAX_ITERS; t++) {
+	for (t = 1; t < MAX_ITERS; t++) {
 		
 		b = log(t*t/N);
 		int k = (rand() % C);
@@ -206,7 +207,7 @@ int main()
 	printf("\nFor the %d - queens problem\n----------------\n", N);
 	
 	if (loss(z, idx_pairs, C) == 0) {
-		printf("Solution : ");
+		printf("Solution found in %d iterations:\n", t);
 		print_int_arr(z, N);
 	} else {
 		printf("Solution not found in %d iterations\n", MAX_ITERS);
