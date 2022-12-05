@@ -1,8 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <time.h>
 #include <math.h>
-#include <omp.h>
 
 /**
  * Fills in z with integers from min to max by step inplace.
@@ -164,7 +164,7 @@ int main()
 	srand(2022);
 	
 	// Variables
-	int N = 500;
+	int N = 10;
 	int C = N * (N-1) / 2;
 	double b = 1;
 	
@@ -178,39 +178,28 @@ int main()
 	
 	// Shuffle the starting position
 	shuffle(z, 2 * N, idx_pairs, C);
-	
-	// Set number of threads
-	omp_set_num_threads(4);
 		
 	// Search
 	int MAX_ITERS = 10000000;
-	int REG_ITERS = 100000;
-	time_t t1, t2;
-	time(&t1);
+	
+	// Calculate current loss
+	int l = loss(z, idx_pairs, C);
 	
 	for (int t = 1; t < MAX_ITERS; t++) {
 		
-		// Calculate loss at regular intervals.
-		if (t % REG_ITERS == 0) {
-			
-			int l = loss(z, idx_pairs, C);
-			time(&t2);
-			system("cls");
-			printf("%d / %d - Loss=%d. For %d iterations, %d seconds.\n", t, MAX_ITERS, l, REG_ITERS, t2-t1);
-			t1 = t2;
-			if (l == 0) { break; }
-		}
-		
-		// Pick a swap at random.
-		b = log(t*t / N);
+		b = log(t*t/N);
 		int k = (rand() % C);
 		int i = idx_pairs[2*k]; 
 		int j = idx_pairs[2*k+1];
-		double acc = min(1, exp(-b*loss_diff(z, i, j, N)));
+		int diff = loss_diff(z, i, j, N);
+		double acc = min(1, exp(-b*diff));	// Acceptance probability.
 		double r = ((double)rand() / (double)(RAND_MAX));
 		if (r < acc) {
 			swap(z, i, j);
+			l += diff;
 		}
+		
+		if (l == 0) { break; }
 	}
 	
 	// Results
@@ -225,7 +214,6 @@ int main()
 	}
 	
 	// Timing information
-	
 	time_t now;
 	time(&now);
 	
