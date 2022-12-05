@@ -164,7 +164,7 @@ int main()
 	srand(2022);
 	
 	// Variables
-	int N = 150;
+	int N = 500;
 	int C = N * (N-1) / 2;
 	double b = 1;
 	
@@ -179,16 +179,12 @@ int main()
 	// Shuffle the starting position
 	shuffle(z, 2 * N, idx_pairs, C);
 	
-	// Probability distribution to build
-	double *p = malloc((C+1) * sizeof(double));
-	
 	// Set number of threads
 	omp_set_num_threads(4);
 		
-	
 	// Search
-	int MAX_ITERS = 1000000;
-	int REG_ITERS = 500;
+	int MAX_ITERS = 10000000;
+	int REG_ITERS = 100000;
 	time_t t1, t2;
 	time(&t1);
 	
@@ -197,9 +193,7 @@ int main()
 		// Calculate loss at regular intervals.
 		if (t % REG_ITERS == 0) {
 			
-			
 			int l = loss(z, idx_pairs, C);
-			
 			time(&t2);
 			system("cls");
 			printf("%d / %d - Loss=%d. For %d iterations, %d seconds.\n", t, MAX_ITERS, l, REG_ITERS, t2-t1);
@@ -207,30 +201,15 @@ int main()
 			if (l == 0) { break; }
 		}
 		
-		// Update beta
-		b = log(t * t / N);
-		
-		#pragma omp parallel for 
-		for (int k = 0; k < C; k++) {
-			int i = idx_pairs[2*k]; 
-			int j = idx_pairs[2*k+1];
-			int* y = malloc(N * sizeof(int));
-			arrcopy(z, y, N);
-			p[k] = min(1, exp(-b*loss_diff(y, i, j, N))) / C;
-			free(y);
-		}
-		
-		double sum = 0;
-		#pragma omp parallel for reduction(+:sum)
-		for (int k = 0; k < C; k++) {
-			sum += p[k];
-		}
-		p[C] = max(0, 1-sum);
-		
-		// Choose a swap.
-		int k = sample(p, C+1);
-		if (k < C) {
-			swap(z, idx_pairs[2*k], idx_pairs[2*k+1]);
+		// Pick a swap at random.
+		b = log(t*t / N);
+		int k = (rand() % C);
+		int i = idx_pairs[2*k]; 
+		int j = idx_pairs[2*k+1];
+		double acc = min(1, exp(-b*loss_diff(z, i, j, N)));
+		double r = ((double)rand() / (double)(RAND_MAX));
+		if (r < acc) {
+			swap(z, i, j);
 		}
 	}
 	
