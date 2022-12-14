@@ -161,7 +161,7 @@ int main()
 	time(&then);
 	
 	// Reproducibility
-	srand(2022);
+	srand(2025);
 	
 	// Variables
 	int N = 1000;
@@ -177,7 +177,7 @@ int main()
 	pairs(idx_pairs, N);
 	
 	// Shuffle the starting position
-	shuffle(z, 2 * N, idx_pairs, C);
+	// shuffle(z, 2 * N, idx_pairs, C);
 		
 	// Search
 	int t = 0;
@@ -188,16 +188,23 @@ int main()
 	
 	for (t = 1; t < MAX_ITERS; t++) {
 		
-		b = log(t*t/N);
+		b = 20;
 		int k = (rand() % C);
 		int i = idx_pairs[2*k]; 
 		int j = idx_pairs[2*k+1];
-		int diff = loss_diff(z, i, j, N);
-		double acc = min(1, exp(-b*diff));	// Acceptance probability.
+		double diff = (double)loss_diff(z, i, j, N);
+		
+		double acc = (diff < 0) ? 1 : exp(-b*diff);
 		double r = ((double)rand() / (double)(RAND_MAX));
 		if (r < acc) {
 			swap(z, i, j);
 			l += diff;
+			
+			
+		}
+		
+		if (t % 1000 == 0) {
+			printf("current loss : %d,\t diff : %lf,\t acc: %lf%%\n", l, diff, acc);
 		}
 		
 		if (l == 0) { break; }
