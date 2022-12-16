@@ -161,7 +161,7 @@ void printcsv(int* src, int len) {
 	// Save to CSV
 	FILE *fp;
 	
-	fp = fopen("N_Queens_solution.txt", "w");
+	fp = fopen("N_Queens_solution.csv", "w");
 	
 	if(fp == NULL) {
         printf("file can't be opened\n");
