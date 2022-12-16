@@ -154,6 +154,27 @@ void arrcopy(int* src, int* dst, int len)
 	}
 }
 
+/**
+ * Takes an integer array src an prints src[i], i for i in range(len)
+ */
+void printcsv(int* src, int len) {
+	// Save to CSV
+	FILE *fp;
+	
+	fp = fopen("N_Queens_solution.txt", "w");
+	
+	if(fp == NULL) {
+        printf("file can't be opened\n");
+        exit(1);
+    }
+ 
+	
+	for (int i=0; i < len; i++) {
+		fprintf(fp,"%i,%i\n", src[i], i);
+		
+	}
+}
+
 int main()
 {	
 	// Snapshot of time
@@ -161,7 +182,7 @@ int main()
 	time(&then);
 	
 	// Reproducibility
-	srand(2025);
+	srand(2022);
 	
 	// Variables
 	int N = 1000;
@@ -177,7 +198,7 @@ int main()
 	pairs(idx_pairs, N);
 	
 	// Shuffle the starting position
-	// shuffle(z, 2 * N, idx_pairs, C);
+	shuffle(z, 2 * N, idx_pairs, C);
 		
 	// Search
 	int t = 0;
@@ -188,7 +209,7 @@ int main()
 	
 	for (t = 1; t < MAX_ITERS; t++) {
 		
-		b = 20;
+		b = log(t*t/N);
 		int k = (rand() % C);
 		int i = idx_pairs[2*k]; 
 		int j = idx_pairs[2*k+1];
@@ -200,12 +221,12 @@ int main()
 			swap(z, i, j);
 			l += diff;
 			
-			
 		}
 		
+		/* UNCOMMENT TO PRINT LOSS EVOLUTION
 		if (t % 1000 == 0) {
 			printf("current loss : %d,\t diff : %lf,\t acc: %lf%%\n", l, diff, acc);
-		}
+		}*/
 		
 		if (l == 0) { break; }
 	}
@@ -220,6 +241,10 @@ int main()
 		printf("Solution not found in %d iterations\n", MAX_ITERS);
 		print_int_arr(z, N);
 	}
+ 
+	
+	// print to csv
+	printcsv(z, N);
 	
 	// Timing information
 	time_t now;
