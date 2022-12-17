@@ -11,6 +11,7 @@ const char FILENAME_KNOWN_BETA_STARS[] = "knownbetastars.csv";
 const char FILENAME_KNOWN_COUNTS[] = "knowncounts.txt";
 // Number of known counts
 const int NUM_KNOWN = 27 - 4 + 1;
+const int NUM_UNKNOWN = 10;
 
 /**
  * Returns log(n!).
@@ -247,8 +248,46 @@ void load_llu_arr(char* filename, long long unsigned *dst, int len) {
 }
 
 /**
- * Reads long long unsigned integer array from files with format
+ * Reads double array from files with format
  * a1,a2,a3,a4,a5,...
+ */
+void load_lf_arr(char* filename, double *dst, int len) {
+	
+	FILE *fp = fopen(filename, "r");
+	if(fp == NULL) {
+        printf("file can't be opened\n");
+        exit(1);
+    }
+    
+    for (int i = 0; i < len; i++) {
+		fscanf(fp, "%lf,", &dst[i]);
+	}
+}
+
+/**
+ * Saves double array from files with format
+ * a1,a2,a3,a4,a5
+ */
+void save_llu_arr(char* filename, long long unsigned *src, int len) {
+	
+	FILE *fp = fopen(filename, "w");
+	if(fp == NULL) {
+        printf("file can't be opened\n");
+        exit(1);
+    }
+    
+    for (int i = 0; i < len; i++) {
+		if (i != len-1) {
+			fprintf(fp, "%I64u,", src[i]);
+		} else {
+			fprintf(fp, "%I64u", src[i]);
+		}
+	}
+}
+
+/**
+ * Saves double array from files with format
+ * a1,a2,a3,a4,a5
  */
 void save_lf_arr(char* filename, double *src, int len) {
 	
@@ -259,7 +298,11 @@ void save_lf_arr(char* filename, double *src, int len) {
     }
     
     for (int i = 0; i < len; i++) {
-		fprintf(fp, "%lf,", src[i]);
+		if (i != len-1) {
+			fprintf(fp, "%lf,", src[i]);
+		} else {
+			fprintf(fp, "%lf", src[i]);
+		}
 	}
 }
 
@@ -296,9 +339,13 @@ double* beta_stars(int M, double beta_del) {
 	// For every N for which the number of solutions is known
 	for (int i = 0; i < NUM_KNOWN; i++, N++) {
 		
+		// Pairs of queen indices
 		int C = N * (N-1) / 2;
+		int *idx_pairs = malloc(2 * C * sizeof(int));
+		pairs(idx_pairs, N);
+		
 		double log_Z_partial = 0; // Current estimate.
-		int T = 0; // Discover T.
+		int T = 1; // Discover T.
 		
 		// Approach the real number of solutions
 		while(1) {
@@ -306,9 +353,6 @@ double* beta_stars(int M, double beta_del) {
 			int *z = malloc(N * sizeof(int));
 			arange(z, 1, N+1, 1);
 		
-			// Pairs of queen indices
-			int *idx_pairs = malloc(2 * C * sizeof(int));
-			pairs(idx_pairs, N);
 			
 			// Shuffle the starting position
 			shuffle(z, 2 * N, idx_pairs, C);
@@ -352,7 +396,6 @@ double* beta_stars(int M, double beta_del) {
 			
 			free(z);
 			free(losses);
-			free(idx_pairs);
 		}
 		
 		// Now T is known.
@@ -360,6 +403,9 @@ double* beta_stars(int M, double beta_del) {
 		
 		// Record approximation.
 		Z_inf_guess[i] = (long long unsigned) exp(log_Z_partial+logfact(N));
+		
+		// Free
+		free(idx_pairs);
 	}
 	
 	// Calculate guess quality.
@@ -390,6 +436,94 @@ double* beta_stars(int M, double beta_del) {
 	return beta_star_known;
 }
 
+double* log_count_solutions(int M, double beta_del) {
+	
+	/* Load fitted betastars for unknown boards N= 50 to 1000 by 50
+	 */
+	double* fit_beta_stars = malloc(NUM_UNKNOWN * sizeof(double));
+	load_lf_arr("fitbetastars.txt", fit_beta_stars, NUM_UNKNOWN);
+	print_lf_arr(fit_beta_stars,NUM_UNKNOWN);
+	
+	// Estimate counts.
+	double* log_count_estimates = malloc(NUM_UNKNOWN * sizeof(long long unsigned));
+	
+	int N = 100;
+	
+	// For every N for which the number of solutions is known
+	for (int i = 0; i < NUM_UNKNOWN; i++, N+=100) {
+		
+		printf("N=%d\n", N);
+		
+		// Pairs of queen indices
+		int C = N * (N-1) / 2;
+		int *idx_pairs = malloc(2 * C * sizeof(int));
+		pairs(idx_pairs, N);
+
+		double log_Z_partial = 0; // Current estimate.
+		int T = (int) fit_beta_stars[i] / beta_del;
+		
+		// Approach the real number of solutions
+		for (int t = 1; t <= T; t++) {
+			
+			// Starting position
+			int *z = malloc(N * sizeof(int));
+			arange(z, 1, N+1, 1);
+			
+			// Shuffle the starting position
+			shuffle(z, 2 * N, idx_pairs, C);
+			
+			// Calculate current loss
+			int l = loss(z, idx_pairs, C);
+			
+			double *losses = malloc(M * sizeof(double));
+			
+			// Draw M samples according to the Metropolis Algorithm.
+			for (int k = 0; k < M; k++) {
+				
+				int r = (rand() % C);
+				int m = idx_pairs[2*r]; 
+				int n = idx_pairs[2*r+1];
+				double diff = (double)loss_diff(z, m, n, N);
+				double acc = (diff < 0) ? 1 : exp(-t*beta_del*diff);
+				double u = ((double)rand() / (double)(RAND_MAX));
+				if (u < acc) {
+					swap(z, m, n);
+					l += diff;
+				}
+				losses[k] = (double) l;
+			}
+			
+			// Estimate ratio
+			double log_Z_beta_t_ratio = 
+				log(sum(exp_arr(scal_prod(
+							-beta_del,losses,M),M),M)/M);
+			
+			// Otherwise, incorporate the next term.
+			log_Z_partial += log_Z_beta_t_ratio;
+			
+			// Free
+			free(z);
+			free(losses);
+			
+		}
+		
+		// Record approximation.
+		log_count_estimates[i] = log_Z_partial+logfact(N);
+		
+		// Free
+		free(idx_pairs);
+		
+	}
+	
+	// Print count estimates.
+	printf("Solution count estimates\n");
+	print_lf_arr(log_count_estimates, NUM_UNKNOWN);
+	
+	free(fit_beta_stars);
+	
+	return log_count_estimates;
+}
+
 int main()
 {	
 	// Timing start
@@ -399,11 +533,17 @@ int main()
 	// Reproducibility
 	srand(2022);
 	
-	// Find good beta_stars for known solutions N=[4...27]
-	double* beta_stars_known = beta_stars(1000, 0.001);
-	save_lf_arr("betastars.txt", beta_stars_known, NUM_KNOWN);
+	// Parameters
+	int M = 1000;
+	double beta_del = 0.001;
 	
-	// 
+	// Find good beta_stars for known solutions N= 4 to 27
+	// double* beta_stars_known = beta_stars(M, beta_del);
+	// save_lf_arr("betastars.txt", beta_stars_known, NUM_KNOWN);
+	
+	// Estimate unknown solutions
+	double* log_count_estimates = log_count_solutions(M, beta_del);
+	save_lf_arr("logcountestimates.txt", log_count_estimates, NUM_UNKNOWN);
 	
 	// Timing end
 	time_t now;
@@ -416,7 +556,7 @@ int main()
 	printf("Diff: %d minutes, %d seconds", diff / 60, diff % 60);
 	
 	// Free
-	free(beta_stars_known);
+	free(log_count_estimates);
 	
 	// Finish
 	return 0;
