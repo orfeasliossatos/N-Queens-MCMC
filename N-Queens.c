@@ -175,6 +175,42 @@ void printcsv(int* src, int len) {
 	}
 }
 
+/**
+ * Saves int array from files with format
+ * a1,a2,a3,a4,a5
+ */
+void save_lf_arr(char* filename, int *src, int len) {
+	
+	FILE *fp = fopen(filename, "w");
+	if(fp == NULL) {
+        printf("file can't be opened\n");
+        exit(1);
+    }
+    
+    for (int i = 0; i < len; i++) {
+		if (i != len-1) {
+			fprintf(fp, "%d,", src[i]);
+		} else {
+			fprintf(fp, "%d", src[i]);
+		}
+	}
+}
+
+/**
+ * Saves and appends int to file with format
+ * a1,a2,a3,a4,a5
+ */
+void append_int(char* filename, int src, int len) {
+	
+	FILE *fp = fopen(filename, "aw");
+	if(fp == NULL) {
+        printf("file can't be opened\n");
+        exit(1);
+    }
+
+	fprintf(fp, "%d,", src)
+}
+
 int main()
 {	
 	// Snapshot of time
@@ -187,7 +223,7 @@ int main()
 	// Variables
 	int N = 1000;
 	int C = N * (N-1) / 2;
-	double b = 1;
+	double b = 100;
 	
 	// Starting position
 	int *z = malloc(N * sizeof(int));
@@ -206,10 +242,14 @@ int main()
 	
 	// Calculate current loss
 	int l = loss(z, idx_pairs, C);
+
+	
+
+	int *losses = malloc((MAX_ITERS) * sizeof(int));
 	
 	for (t = 1; t < MAX_ITERS; t++) {
 		
-		b = log(t*t/N);
+		// b = log(t*t/N);
 		int k = (rand() % C);
 		int i = idx_pairs[2*k]; 
 		int j = idx_pairs[2*k+1];
@@ -222,6 +262,9 @@ int main()
 			l += diff;
 			
 		}
+
+
+		losses[t-1] = l;
 		
 		/* UNCOMMENT TO PRINT LOSS EVOLUTION
 		if (t % 1000 == 0) {
@@ -230,6 +273,8 @@ int main()
 		
 		if (l == 0) { break; }
 	}
+
+	save_lf_arr("losses.csv", losses, MAX_ITERS);
 	
 	// Results
 	printf("\nFor the %d - queens problem\n----------------\n", N);
