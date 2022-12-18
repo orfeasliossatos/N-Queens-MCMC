@@ -320,48 +320,53 @@ void save_lf_arr(const char* filename, double *src, int len, bool append) {
 	
 }
 
-void log_count_solutions(int M, double beta_del, bool doclear) {
+/**
+ * Procedure to find the beta_stars which best approximate known
+ * solution counts.
+ */
+double* beta_stars(int M, double beta_del) {
 	
-	// Clear partial estimates
-	if (doclear) {
-		for (int i = 0; i < 10; i++) {
-			fclose(fopen(FILENAME_PARTIAL_ESTIMATES[i], "w"));
-		}
+	// Read and print out known solution counts.
+	long long unsigned *Z_inf_known = malloc(NUM_KNOWN * sizeof(long long unsigned));
+	load_llu_arr("knowncounts.txt", Z_inf_known, NUM_KNOWN);
+	
+	printf("Known solution counts for N=4..27:\n");
+	print_llu_arr(Z_inf_known, NUM_KNOWN);
+	printf("\n");
+	
+	// Map to log.
+	double *log_Z_inf_known = malloc(NUM_KNOWN * sizeof(double));
+    
+    for (int i = 0; i < NUM_KNOWN; i++) {
+		log_Z_inf_known[i] = log(Z_inf_known[i]);
 	}
-	/* Load fitted betastars for unknown boards N= 50 to 1000 by 50
-	 */
-	double* fit_beta_stars = malloc(NUM_UNKNOWN * sizeof(double));
-	load_lf_arr(FILENAME_FIT_BETASTARS, fit_beta_stars, NUM_UNKNOWN);
-	print_lf_arr(fit_beta_stars,NUM_UNKNOWN);
 	
-	// Estimate counts.
-	double* log_count_estimates = malloc(NUM_UNKNOWN * sizeof(double));
+	// Approximated solution counts.
+	long long unsigned *Z_inf_guess = malloc(NUM_KNOWN * sizeof(long long unsigned));	
 	
-	int N = 100;
+	// Array of beta_star_known to fill in.
+	double *beta_star_known = malloc(NUM_KNOWN * sizeof(double));
+	int N = 4; 
+	
+	printf("Parameters: M = %d, beta_del = %.3lf\n\n", M, beta_del);
 	
 	// For every N for which the number of solutions is known
-	for (int i = 0; i < NUM_UNKNOWN; i++, N+=100) {
-		
-		printf("N=%d\n", N);
+	for (int i = 0; i < NUM_KNOWN; i++, N++) {
 		
 		// Pairs of queen indices
 		int C = N * (N-1) / 2;
 		int *idx_pairs = malloc(2 * C * sizeof(int));
 		pairs(idx_pairs, N);
-
-		double log_Z_partial = 0; // Current estimate.
-		int T = fit_beta_stars[i] / beta_del;
 		
-		printf("T=%d\n", T);
-		// Record the partial estimates.
-		double *partial_estimates = malloc(T * sizeof(double)); 
+		double log_Z_partial = 0; // Current estimate.
+		int T = 1; // Discover T.
 		
 		// Approach the real number of solutions
-		for (int t = 1; t <= T; t++) {
-			
+		while(1) {
 			// Starting position
 			int *z = malloc(N * sizeof(int));
 			arange(z, 1, N+1, 1);
+		
 			
 			// Shuffle the starting position
 			shuffle(z, 2 * N, idx_pairs, C);
@@ -378,7 +383,7 @@ void log_count_solutions(int M, double beta_del, bool doclear) {
 				int m = idx_pairs[2*r]; 
 				int n = idx_pairs[2*r+1];
 				double diff = (double)loss_diff(z, m, n, N);
-				double acc = (diff < 0) ? 1 : exp(-t*beta_del*diff);
+				double acc = (diff < 0) ? 1 : exp(-T*beta_del*diff);
 				double u = ((double)rand() / (double)(RAND_MAX));
 				if (u < acc) {
 					swap(z, m, n);
@@ -392,30 +397,57 @@ void log_count_solutions(int M, double beta_del, bool doclear) {
 				log(sum(exp_arr(scal_prod(
 							-beta_del,losses,M),M),M)/M);
 			
+			// If the next partial sum undershoots the estimate, break.
+			if (log_Z_partial + log_Z_beta_t_ratio + logfact(N) 
+					< log_Z_inf_known[i]) {
+				break;
+			}
+			
 			// Otherwise, incorporate the next term.
 			log_Z_partial += log_Z_beta_t_ratio;
-			partial_estimates[t-1] = log_Z_partial + logfact(N);
 			
-			// Free
+			T++;
+			
 			free(z);
 			free(losses);
-			
 		}
 		
+		// Now T is known.
+		beta_star_known[i] = T * beta_del;
+		
 		// Record approximation.
-		log_count_estimates[i] = log_Z_partial+logfact(N);
-		save_lf_arr(FILENAME_PARTIAL_ESTIMATES[i], partial_estimates, T, 1);
+		Z_inf_guess[i] = (long long unsigned) exp(log_Z_partial+logfact(N));
 		
 		// Free
 		free(idx_pairs);
-		free(partial_estimates);
 	}
 	
-	// Print count estimates.
-	printf("Log solution count estimates\n");
-	print_lf_arr(log_count_estimates, NUM_UNKNOWN);
+	// Calculate guess quality.
+	double *guess_quality = malloc(NUM_KNOWN * sizeof(double));
+	for (int i = 0; i < NUM_KNOWN; i++) {
+		guess_quality[i] = percent_diff(Z_inf_guess[i], Z_inf_known[i]);
+	}
 	
-	free(fit_beta_stars);
+	// Print guesses.
+	printf("Solution count guesses\n");
+	print_llu_arr(Z_inf_guess, NUM_KNOWN);
+	printf("\n");
+	
+	// Print guess quality
+	printf("Worst guess percent diff: ");
+	printf("%.2lf%%\n\n", 100 * arr_max(guess_quality, NUM_KNOWN));
+	
+	// Print beta-stars.
+	printf("Beta-stars\n");
+	print_lf_arr(beta_star_known, NUM_KNOWN);
+	printf("\n");
+	
+	// Print 
+	free(Z_inf_known);
+	free(Z_inf_guess);
+	free(guess_quality);
+	free(log_Z_inf_known);
+	return beta_star_known;
 }
 
 int main()
@@ -433,8 +465,10 @@ int main()
 	
 	printf("Running...\n");
 	
-	// UNCOMMENT to estimate unknown solutions
-	log_count_solutions(M, beta_del, 0);
+	// UNCOMMENT to find good beta_stars for known solutions N= 4 to 27
+	double* beta_stars_known = beta_stars(M, beta_del);
+	save_lf_arr(FILENAME_KNOWN_BETA_STARS, beta_stars_known, NUM_KNOWN, 0);
+	free(beta_stars_known);
 	
 	
 	// Timing end
