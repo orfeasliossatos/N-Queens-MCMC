@@ -457,7 +457,7 @@ int main()
 	time(&then);
 	
 	// Reproducibility
-	srand(time(NULL));
+	srand(2022);
 	
 	// Parameters
 	int M = 1000;
