@@ -1,3 +1,5 @@
+# Loss evolutions for different values of beta
+
 This directory would contain the following csv's, which record the loss evolutions for various values of beta used to generate the plots in this directory.
 
 "losses_beta_[
@@ -12,4 +14,3 @@ This directory would contain the following csv's, which record the loss evolutio
 	log,
 	log_square
 	square].csv"
-	
