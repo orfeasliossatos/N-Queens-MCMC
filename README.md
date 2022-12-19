@@ -15,15 +15,16 @@ Example command for compiling the C scripts :
 
 Main part :
 
-`N-Queens.c` : C script implementing Metropolis-Hastings algorithm. Compile and run to produce two files, namely 
-1. `N_Queens_solution.csv` : Two columns of integers from 1 to N representing row and column indices of a solution to the N-queens problem. The value of N is 1000, which is hardcoded.
-2. `losses.csv` : Multiple rows of comma-separated integers representing the loss at every iteration of the Metropolis-Hastings algorithm. Each row corresponds to a new run of the algorithm (with `repeat` number of rows). The value of `repeat` is 10, which is hardcoded. The value of beta(t) is also hardcoded (and could be for ex. log(t), log(t*t) or t). You can find in the folder `beta(t)_data` the csv data and plots for the different values of beta(t) we tried.
+`N-Queens.c` : C script implementing Metropolis-Hastings algorithm. Produces `N_Queens_solution.csv`, which contains two columns of integers from 1 to N representing row and column indices of a solution to the N-queens problem. The value of N is 1000, which is hardcoded.
+
+`Fixed.c` & `Annealing.c`: C scripts implementing Metropolis-Hastings algorithm. Produces `losses_beta_[7,8,9,10,100,1000].csv` and `losses_beta_[exp,identity,log,log_square,square].csv` in `data_beta_t` which record the loss value for different schemes of $\beta$ at every iteration of the Metropolis-Hastings algorithm. Each row corresponds to a new run of the algorithm (with `repeat` number of rows). The value of `repeat` is 50, which is hardcoded. 
+
 
 Additional :
 1. `N-Queens.ipynb` : Our python implementation of the Metropolis-Hastings algorithm. It is not used in the final report (as less efficient than our C implementation), but is kept for reference.
 2. `Measure_time.ipynb` : Jupyter Notebook that measures the efficiency of different implementations of some of the function we can find in the Metropolis-Hastings algorithm implemented in `N-Queens.ipynb`.
-3. `beta(t)_data` : Folder containing the data and plots for the different values of beta(t) we tried. The data is in csv format, and the plots are in png format. The data is a csv file with 10 rows, each row corresponding to a run of the Metropolis-Hastings algorithm. The columns are the losses at each iteration of the algorithm. The value of N is 1000, which is hardcoded.
-4. `plots_solutions.ipynb` : Jupyter Notebook used to plot the figure in our LaTeX report.
+3. `data_beta_t` : Folder containing the data and plots for the different values of beta(t) we tried. The data is in csv format, and the plots are in png format. The data is a csv file with 10 rows, each row corresponding to a run of the Metropolis-Hastings algorithm. The columns are the losses at each iteration of the algorithm. The value of N is 1000, which is hardcoded.
+4. `plots_solutions.ipynb` : Jupyter Notebook used to plot the figures for the first part of our LaTeX report.
 
 ## Part 2.
 
