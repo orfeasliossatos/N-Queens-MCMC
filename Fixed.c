@@ -263,7 +263,7 @@ int main()
 	};
 	
 	// Variables
-	int N = 1000;
+	int N = 100;
 	int C = N * (N - 1) / 2;
 	
 	// Pairs of queen indices
