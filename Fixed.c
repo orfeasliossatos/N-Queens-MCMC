@@ -4,7 +4,7 @@
 #include <time.h>
 #include <math.h>
 
-#define NB_FUN 5
+#define NB_FIXED 6
 
 typedef double (*real_fun)(double);
 
@@ -249,6 +249,22 @@ int main()
 	// Reproducibility
 	srand(2022);
 
+	// Number of repeat
+	int repeat = 50;
+
+	// Define various functions.
+	double betas[NB_FIXED] = {7, 8, 9, 10, 100, 1000};
+	
+	// Define filenames.
+	const char* losses_filenames[] = {
+		"data_beta_t/losses_beta_7.csv",
+		"data_beta_t/losses_beta_8.csv",
+		"data_beta_t/losses_beta_9.csv",
+		"data_beta_t/losses_beta_10.csv",
+		"data_beta_t/losses_beta_100.csv",
+		"data_beta_t/losses_beta_1000.csv",
+	};
+	
 	// Variables
 	int N = 1000;
 	int C = N * (N - 1) / 2;
@@ -257,59 +273,64 @@ int main()
 	int *idx_pairs = malloc(2 * C * sizeof(int));
 	pairs(idx_pairs, N);
 
-	// Starting position
-	int *z = malloc(N * sizeof(int));
-	arange(z, 1, N + 1, 1);
-
-	// Shuffle the starting position
-	shuffle(z, 2 * N, idx_pairs, C);
-
-	// Search
-	int t = 0;
-	int MAX_ITERS = 500000;
-
-	// Calculate current loss
-	int l = loss(z, idx_pairs, C);
-
-	for (t = 1; t <= MAX_ITERS; t++)
-	{
-		double b = 1000;
-		int k = (rand() % C);
-		int i = idx_pairs[2 * k];
-		int j = idx_pairs[2 * k + 1];
-		double diff = (double)loss_diff(z, i, j, N);
-		double acc = (diff < 0) ? 1 : exp(-b * diff);
-		double r = ((double)rand() / (double)(RAND_MAX));
-		if (r < acc)
+	for (int f = 0; f < NB_FIXED; f++) {
+		
+		// Clear file 
+		fclose(fopen(losses_filenames[f], "w"));
+		
+		// Record loss evolution
+		printf("Saving to = %s\n", losses_filenames[f]);
+		for (int repeat_nbr = 0; repeat_nbr < repeat; repeat_nbr++)
 		{
-			swap(z, i, j);
-			l += diff;
+			// Starting position
+			int *z = malloc(N * sizeof(int));
+			arange(z, 1, N + 1, 1);
+
+			// Shuffle the starting position
+			shuffle(z, 2 * N, idx_pairs, C);
+
+			// Search
+			int t = 0;
+			int MAX_ITERS = 500000;
+
+			// Calculate current loss
+			int l = loss(z, idx_pairs, C);
+
+			int *losses = malloc((MAX_ITERS) * sizeof(int));
+
+			for (t = 1; t <= MAX_ITERS; t++)
+			{
+				double b = betas[f];
+				int k = (rand() % C);
+				int i = idx_pairs[2 * k];
+				int j = idx_pairs[2 * k + 1];
+				double diff = (double)loss_diff(z, i, j, N);
+
+				double acc = (diff < 0) ? 1 : exp(-b * diff);
+				double r = ((double)rand() / (double)(RAND_MAX));
+				if (r < acc)
+				{
+					swap(z, i, j);
+					l += diff;
+				}
+
+				losses[t - 1] = (int)l;
+
+				if (l == 0)
+				{
+					break;
+				}
+			}
+
+			// Save losses
+			save_lf_arr(losses_filenames[f], losses, MAX_ITERS);
+			
+			// Free memory
+			free(z);
+			free(losses);
 		}
-
-		if (l == 0)
-		{
-			break;
-		}
 	}
 
-
-	// Results
-	printf("\nFor the %d - queens problem\n----------------\n", N);
-
-	if (loss(z, idx_pairs, C) == 0)
-	{
-		printf("Solution found in %d iterations:\n", t);
-		print_int_arr(z, N);
-	}
-	else
-	{
-		printf("Solution not found in %d iterations\n", MAX_ITERS);
-		print_int_arr(z, N);
-	}
-
-	// print to csv
-	printcsv(z, N);
-	
 	// Timing information
 	time_t now;
 	time(&now);
@@ -321,7 +342,6 @@ int main()
 	printf("Diff: %d minutes, %d seconds\n", diff / 60, diff % 60);
 	
 	//Free
-	free(z);
 	free(idx_pairs);
 	
 	return 0;
