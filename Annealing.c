@@ -246,12 +246,9 @@ int main()
 	time_t then;
 	time(&then);
 	
-	// Reproducibility
-	srand(2022);
 
 	// Number of repeat
-	int repeat = 50;
-
+	int repeat = 30;
 	// Define various functions.
 	real_fun functions[NB_FUN] = {&identity, &square, &log, &log_square, &exp};
 	
@@ -274,6 +271,9 @@ int main()
 
 	for (int f = 0; f < NB_FUN; f++) {
 		
+		// Reproducibility
+		srand(2022);
+		
 		// Clear file 
 		fclose(fopen(losses_filenames[f], "w"));
 		
@@ -290,13 +290,13 @@ int main()
 
 			// Search
 			int t = 0;
-			int MAX_ITERS = 500000;
+			int MAX_ITERS = 400000;
 
 			// Calculate current loss
 			int l = loss(z, idx_pairs, C);
 
-			int *losses = malloc((MAX_ITERS) * sizeof(int));
-
+			int *losses = malloc((int) (MAX_ITERS / 10) * sizeof(int));
+			
 			for (t = 1; t <= MAX_ITERS; t++)
 			{
 				double b = functions[f](t);
@@ -313,16 +313,20 @@ int main()
 					l += diff;
 				}
 
-				losses[t - 1] = (int)l;
-
+				if ((t -1) % 10 == 0) {
+					int idx = (t - 1) / 10;
+					losses[idx] = (int)l;
+				}
+				
 				if (l == 0)
 				{
 					break;
 				}
 			}
-
+			
+			
 			// Save losses
-			save_lf_arr(losses_filenames[f], losses, MAX_ITERS);
+			save_lf_arr(losses_filenames[f], losses, MAX_ITERS / 10);
 			
 			// Free memory
 			free(z);
