@@ -41,6 +41,12 @@ Additional :
 
 Michel Jean-Baptiste, Orfeas Liossatos and Gaiëtan Renault
 
+# Project statement
+
+In `report/MCAA_Project_Problem.pdf`
+
 # Project report
 
-Currenty at : https://www.overleaf.com/read/ntrtspbrbjwx
+In `report/MCAA_Project_Report.pdf`
+
+And currenty online at : https://www.overleaf.com/read/ntrtspbrbjwx
