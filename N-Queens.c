@@ -201,7 +201,7 @@ void printcsv(int *src, int len)
 void save_lf_arr(char *filename, int *src, int len)
 {
 
-	FILE *fp = fopen(filename, "a+"); // TODO: Append
+	FILE *fp = fopen(filename, "a+"); // Append
 	if (fp == NULL)
 	{
 		printf("file can't be opened\n");
@@ -216,7 +216,7 @@ void save_lf_arr(char *filename, int *src, int len)
 		}
 		else
 		{
-			fprintf(fp, "%d\n", src[i]); // TODO: New line
+			fprintf(fp, "%d\n", src[i]); // New line
 		}
 	}
 	fclose(fp);
@@ -246,7 +246,7 @@ int main()
 	// Number of repeat
 	int repeat = 10;
 
-	FILE *fp = fclose(fopen("losses.csv", "w")); // TODO: Clear file contents
+	FILE *fp = fclose(fopen("losses.csv", "w")); // Clear file contents
 
 	for (int repeat_nbr = 0; repeat_nbr < repeat; repeat_nbr++)
 	{
@@ -283,7 +283,6 @@ int main()
 		{
 			// beta to change
 			// b = t;
-			// b = log(t + 10) * (10 * N);
 			// b = log(t);
 			// b = log(t * t);
 			b = t * t;
